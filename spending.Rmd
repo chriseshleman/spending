@@ -1,0 +1,110 @@
+---
+title: "Spending Habits"
+author: "Christopher Eshleman"
+date: "5/18/2019"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Spending habits
+I'm going to try and understand my spending habits through exploratory work. 
+A sidecar goal is to find ways to reduce personal spending by 5 percent over the next two years. But first things first. 
+
+I went to my bank and credit card websites and figured out how to download spending histories. I could go way back with my checking account / debit card, but only four months or so for my two credit cards. 
+
+```{r}
+
+cat("\014") # clear the console
+rm(list=ls())
+dev.off() 
+
+check = read.csv("~/Dropbox/Home/Financial/spending/Checking1.csv", header=F) 
+names(check) = c("date","amt","na","check_no","desc") 
+check$card = "debit" 
+
+cc1 = read.csv("~/Dropbox/Home/Financial/spending/CreditCard4.csv", header=F) 
+names(cc1) = c("date","amt","na","check_no","desc") 
+cc1$card = "cardWF" 
+
+dat = rbind(check,cc1) 
+dat$na = NULL 
+dat$check_no = NULL 
+
+``` 
+
+So I'll combine the first file (checking/debit) with my first credit card. 
+Then I'll read in the second card, which is from a different institution, and reshape it to match the format from teh first two. Then I'll be able to mash all three together. 
+
+```{r}
+cc2 = read.csv("~/Dropbox/Home/Financial/spending/bk_download.csv", header=F) 
+cc2$card = "cardUS" 
+cc2 = cc2[, c(3,7,5,8)] 
+names(cc2) = c("date","amt","desc","card") 
+
+dat = rbind(dat,cc2) 
+
+rm(cc1,cc2,check) 
+
+dat$date = as.Date(dat$date, format="%m/%d/%Y")  #recognizes this variable as a date. 
+```
+
+Since only one of them includes dates back to the beginning of 2018, I'll chop off everything before February of this year. That'll give me three and a half months to get started with. 
+
+```{r}
+dat = subset(dat,dat$date>"2019-01-31") 
+```
+
+## Spending 
+
+I want to know how I spend money by category or type. Groceries versus movie rentals (mostly on Google Play), for example. 
+
+First, some basic stuff. Do I use some cards for bigger purchases than others? 
+
+```{r}
+spend = subset(dat,dat$amt<0 & dat$amt>-1200) #Limit to spending, not deposits or payments
+spend$amount = -(spend$amt) #Make it positive
+summary(spend$amount) 
+```
+
+I focused on spending, not deposits or payments. And I knocked out a one-time big-ticket item that shouldn't count as part of my personal spending, as well as monthly rent. 
+
+I have so much spending that falls into the few-dollar range, I'll take the log of spending for graphing purposes. 
+
+```{r, echo=FALSE}
+library(grid)
+library(ggplot2) 
+fill <- "#4271AE"
+lines <- "#1F3552"
+
+boxes = ggplot(spend, aes(x = card, y = log(amount))) +
+        geom_boxplot(colour = lines, fill = fill,
+                     size = 1) 
+        #+
+        #scale_y_continuous(name = "Purchase amount")#,
+                              #breaks = seq(0, 175, 25),
+                              #limits=c(0, 175)) 
+        #            +
+        #scale_x_discrete(name = "Card") +
+        #ggtitle("How much I spend vs what I'm using") +
+        #theme_bw() +
+        #theme(panel.grid.major = element_line(colour = "#d3d3d3"),
+        #      panel.grid.minor = element_blank(),
+        #      panel.border = element_blank(),
+        #      panel.background = element_blank(),
+        #      plot.title = element_text(size = 14, family = "Tahoma", face = "bold"),
+        #      text=element_text(family = "Tahoma"),
+        #      axis.title = element_text(face="bold"),
+        #      axis.text.x = element_text(colour="black", size = 11),
+        #      axis.text.y = element_text(colour="black", size = 9),
+        #      axis.line = element_line(size=0.5, colour = "black"))
+boxes
+```
+
+Yep, looks like I've been using my "US" credit card for slightly larger purposes. I wonder why that is ... it's the most recent card I got. 
+
+More to come here ... 
+
+(Note that the `echo = FALSE` parameter was added to the code chunk to prevent printing of the R code that generated the plot.) 
